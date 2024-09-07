@@ -23,7 +23,7 @@ I used conda to build a virtual env for the project myself
 
 1. Clone the repository:
    ```bash
-    git clone https://github.com/yourusername/DigitalPsychometric.git
+    git clone https://github.com/yourusername/Digital-Psychometric.git
 2. Navigate to the project directory:
     cd OnlinePsychometric
 3. Install the required dependencies
