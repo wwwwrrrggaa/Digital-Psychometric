@@ -30,7 +30,8 @@ I used conda to build a virtual env for the project myself
 2. Navigate to the project directory:
     cd OnlinePsychometric
 3. Install the required dependencies
-4. Activate the virtual environment:
+4. Add the Data directories from https://drive.google.com/drive/folders/1DxCrBljnnyhWbiiAIq769l2jRjxZ2rUf?usp=drive_link
+5. Activate the virtual environment:
     conda activate OnlinePsychometric
 
 
