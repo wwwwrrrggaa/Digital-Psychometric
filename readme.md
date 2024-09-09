@@ -1,5 +1,8 @@
 # DigitalPsychometric
 
+![image](https://github.com/user-attachments/assets/d82d8e70-5de9-4372-8d47-995eb1edc35e)
+
+
 DigitalPsychometric is a tool for digitizing printed psychometric exams and making the simulation process easier.
 
 
@@ -82,3 +85,6 @@ other files are basicly the pyside gui
 
 
 written with the help of chatgpt
+
+![image](https://github.com/user-attachments/assets/7159d054-e673-4ab7-b24a-9c3a4cfcf6b1)
+
