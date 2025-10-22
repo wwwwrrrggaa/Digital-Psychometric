@@ -1,3 +1,9 @@
+"""Zoom selector widget for PDF zoom levels.
+
+This module provides a small QComboBox that exposes common zoom
+options and emits signals to drive the PDF view.
+"""
+
 # Copyright (C) 2022 The Qt Company Ltd.
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 

@@ -13,54 +13,58 @@ import pdfbackend
 
 font_size=12
 
-def getanswerfromsave(filename):
+
+def get_answer_from_save(filename):
     with open(filename, "rb") as fp:
         return pickle.load(fp)
 
 
-def savegrades(grades):
+def save_grades(grades):
     filename = main.getsaveslot() + "\Grade\Grade.txt"
     with open(filename, "wb") as fp:
         pickle.dump(grades, fp)
 
 
-def getchapterscore(a, b):
+def get_chapter_score(a, b):
     errorFormat = '<span style="color:red;">{}</span>'
     correctFormat = '<span style="color:green;">{}</span>'
-    sum = 0
+    total = 0
     wronguser = []
     wrongcorrect = []
     for i in range(len(a)):
         if a[i] == b[i]:
-            sum += 1
+            total += 1
             wronguser.append(str(a[i]))
             wrongcorrect.append(str(a[i]))
 
         else:
             wronguser.append(errorFormat.format(str(a[i])))
             wrongcorrect.append(correctFormat.format(str(b[i])))
-    return sum, wronguser, wrongcorrect
+    return total, wronguser, wrongcorrect
 
-def fixlist(true_answers:list):
+
+def fix_list(true_answers: list):
+    # original implementation returned the list directly; preserve behavior
     return true_answers
-    return [int(x) for x  in true_answers if x!="p"]
-def givechapters(saveslot):
-    shuffle = main.getsaveslot()
+
+
+def give_chapters(saveslot):
+    shuffle = main.get_save_slot()
     shuffle = pickle.load(open(shuffle + "\Grade\Order.txt", "rb"))
-    user_answers_file_names = [saveslot+"\\Answers\\"+file_name for file_name in os.listdir(saveslot+"\\Answers\\")]
-    true_answers_file_names = [saveslot+"\\TrueAnswers\\"+file_name for file_name in os.listdir(saveslot+"\\TrueAnswers\\")]
+    user_answers_file_names = [saveslot + "\\Answers\\" + file_name for file_name in os.listdir(saveslot + "\\Answers\\")]
+    true_answers_file_names = [saveslot + "\\TrueAnswers\\" + file_name for file_name in os.listdir(saveslot + "\\TrueAnswers\\")]
     finalanswerlist = [0 for i in range(len(user_answers_file_names))]
     finaltruelist = [0 for i in range(len(user_answers_file_names))]
     for k in range(len(user_answers_file_names)):
         i = shuffle[k]
-        nowlist = fixlist(getanswerfromsave(user_answers_file_names[k]))
-        truelist = fixlist(getanswerfromsave(true_answers_file_names[i]))
+        nowlist = fix_list(get_answer_from_save(user_answers_file_names[k]))
+        truelist = fix_list(get_answer_from_save(true_answers_file_names[i]))
         finalanswerlist[int(true_answers_file_names[k][-7])] = nowlist
         finaltruelist[int(true_answers_file_names[k][-7])] = truelist
     return finalanswerlist, finaltruelist
 
 
-def getimg(saveslot):
+def get_img(saveslot):
     pass
 
 
@@ -71,7 +75,6 @@ class Window(PySide6.QtWidgets.QDialog):
 
     def __init__(self,saveslot):
         super().__init__(parent=None)
-        # self.connect(Window._on_destroyed)
         self.setWindowTitle("End-screen")
         height = self.height()
         width = self.width()
@@ -117,7 +120,7 @@ class Window(PySide6.QtWidgets.QDialog):
         e.setFont(PySide6.QtGui.QFont("Aptos", font_size))
         f.setFont(PySide6.QtGui.QFont("Aptos", font_size))
 
-        alist, tlist = givechapters(saveslot)
+        alist, tlist = give_chapters(saveslot)
         formLayout.addRow(self.Box1, a)
         formLayout.addRow(self.Box2, b)
         formLayout.addRow(self.Box3, c)
@@ -125,7 +128,6 @@ class Window(PySide6.QtWidgets.QDialog):
         formLayout.addRow(self.Box5, e)
         formLayout.addRow(self.Box6, f)
 
-        # self.boxes=[]
         mathrawscore = 0
         hebrawscore = 0
         engrawscore = 0
@@ -134,10 +136,10 @@ class Window(PySide6.QtWidgets.QDialog):
             alist[i] = alist[i][::-1]
             if "p" in tlist[i]:
                 tlist[i].remove("p")
-                grade, wronguser, wrongcorrect = getchapterscore(alist[i], tlist[i])
+                grade, wronguser, wrongcorrect = get_chapter_score(alist[i], tlist[i])
                 long = PySide6.QtWidgets.QLabel(str(wrongcorrect))
             else:
-                grade, wronguser, wrongcorrect = getchapterscore(alist[i], tlist[i])
+                grade, wronguser, wrongcorrect = get_chapter_score(alist[i], tlist[i])
                 lenchapter = len(alist[i])
                 if lenchapter == 20:
                     mathrawscore += grade
@@ -145,7 +147,6 @@ class Window(PySide6.QtWidgets.QDialog):
                     engrawscore += grade
                 elif lenchapter == 23:
                     hebrawscore += grade
-                # hme
                 long = PySide6.QtWidgets.QLabel(str(wrongcorrect))
             short = PySide6.QtWidgets.QLabel(str(wronguser))
 
@@ -154,7 +155,7 @@ class Window(PySide6.QtWidgets.QDialog):
             difbox = PySide6.QtWidgets.QLabel()
             shortbox.setText("\u05E4\u05E8\u05E7 {} \u05EA\u05E9\u05D5\u05D1\u05D5\u05EA:".format(str(i + 1)))
             longbox.setText(
-                "\u05E4\u05E8\u05E7 {} \u05EA\u05E9\u05D5\u05D1\u05D5\u05EA \u05E0\u05DB\u05D5\u05E0\u05D5\u05EA:".format(
+                "\u05E4\u05E8\u05E7 {} \u05EA\u05E9\u05D5\u05D1\u05D5\u05EA \u05E0\u05DB\u05D5\u05DF\u05D5\u05EA:".format(
                     str(i + 1)))
             difbox.setText(
                 "\u05E4\u05E8\u05E7 {} \u05E9\u05D2\u05D9\u05D0\u05D5\u05EA: {}".format(
@@ -175,9 +176,9 @@ class Window(PySide6.QtWidgets.QDialog):
             answerLayout.addRow(long, longbox)
             answerLayout.addRow(PySide6.QtWidgets.QLabel())
             answerLayout.addRow(PySide6.QtWidgets.QLabel())
-        gradingkey=pickle.load(open(saveslot +r"\Grade\gradingkey.txt",'rb'))
-        a, b, c = pdfbackend.givefinalscores(
-            [str(hebrawscore), str(mathrawscore), str(engrawscore)],gradingkey
+        gradingkey = pickle.load(open(saveslot + r"\Grade\gradingkey.txt", 'rb'))
+        a, b, c = pdfbackend.give_final_scores(
+            [str(hebrawscore), str(mathrawscore), str(engrawscore)], gradingkey
         )
 
         self.Box1.setText(str(hebrawscore))
@@ -193,13 +194,9 @@ class Window(PySide6.QtWidgets.QDialog):
         dialogLayout.addLayout(formLayout)
         pic.setPixmap(
             PySide6.QtGui.QPixmap(
-                main.getsaveslot() + r"\images\answer.png"
+                main.get_save_slot() + r"\images\answer.png"
             ).scaledToHeight(self.window().height() * int(1.8))
         )
         pic.setAlignment(PySide6.QtGui.Qt.AlignmentFlag.AlignTop)
-
-        # self.ButtonExit = PySide6.QtWidgets.QPushButton(self.tr("Exit"))
-        # dialogLayout.addWidget(self.ButtonExit)
-        # self.ButtonExit.clicked.connect(self._on_destroyed)
 
         self.setLayout(dialogLayout)

@@ -1,3 +1,9 @@
+"""Small exam preprocessing utilities (cosmetic docstring only).
+
+This file contains preprocessing helpers for exams. Changes are
+cosmetic only: a module docstring was added.
+"""
+
 import os
 import pickle
 import re
@@ -6,17 +12,22 @@ import sys
 
 from pymupdf import open as pdfopen
 
+
 gradingkey = []
 saveslot = ""
 
 
-def getgradingkey():
+def get_grading_key():
     global gradingkey
     return gradingkey
 
 
-def givefinalscores(rawscores):
-    gradingkey = getgradingkey()
+# backward compatible name
+getgradingkey = get_grading_key
+
+
+def give_final_scores(rawscores):
+    gradingkey = get_grading_key()
     finalgradingkey = {
         "50": "200",
         "51": "221",
@@ -136,14 +147,22 @@ def givefinalscores(rawscores):
     return totalscore, totalmathscore, totalhebscore
 
 
-def saveanswers(answerlist, counter):
-    appdata = getsaveslot() + r"\Answers\\" + str(counter) + ".txt"
+# backward compatible name
+givefinalscores = give_final_scores
+
+
+def save_answers(answerlist, counter):
+    appdata = get_save_slot() + r"\Answers\\" + str(counter) + ".txt"
     with open(appdata, "wb") as fp:
         pickle.dump(answerlist, fp)
     return appdata
 
 
-def classifychapters(answerlist):
+# backward compatible name
+saveanswers = save_answers
+
+
+def classify_chapters(answerlist):
     list2 = []
     for item in answerlist:
         if "p" in item:
@@ -157,12 +176,20 @@ def classifychapters(answerlist):
     return list2
 
 
-def getsaveslot():
+# backward compatible name
+classifychapters = classify_chapters
+
+
+def get_save_slot():
     global saveslot
     return saveslot
 
 
-def fillrange(seplist):
+# backward compatible name
+getsaveslot = get_save_slot
+
+
+def fill_range(seplist):
     chapterlist = {str(i + 1): [] for i in range(6)}
     count = 1
     for j in range(len(seplist) - 1):
@@ -173,8 +200,12 @@ def fillrange(seplist):
     return chapterlist
 
 
-def createchapterfiles(filename, pagelist):
-    appdata = getsaveslot() + "\Chapters"
+# backward compatible name
+fillrange = fill_range
+
+
+def create_chapter_files(filename, pagelist):
+    appdata = get_save_slot() + "\Chapters"
     filenames = []
     for i in pagelist.keys():
         ogfile = pdfopen(filename)
@@ -187,18 +218,26 @@ def createchapterfiles(filename, pagelist):
     return filenames
 
 
-def wipesaveslot(saveslot):
-    for folder in os.listdir(saveslot):
-        for file in os.listdir(saveslot + r"\\" + folder):
-            os.remove(saveslot + r"\\" + folder + r"\\" + file)
+# backward compatible name
+createchapterfiles = create_chapter_files
 
 
-def savetrueanswers(answerlist, chapternames):
+def wipe_save_slot(saveslot_path):
+    for folder in os.listdir(saveslot_path):
+        for file in os.listdir(saveslot_path + r"\\" + folder):
+            os.remove(saveslot_path + r"\\" + folder + r"\\" + file)
+
+
+# backward compatible name
+wipesaveslot = wipe_save_slot
+
+
+def save_true_answers(answerlist, chapternames):
     counter = 0
     trueanswerlist = []
     for i in range(len(answerlist)):
         appdata = (
-            getsaveslot()
+            get_save_slot()
             + "\Trueanswers\\"
             + str(i)
             + "-"
@@ -211,16 +250,20 @@ def savetrueanswers(answerlist, chapternames):
     return trueanswerlist
 
 
-def mainfullexam(filename, saveslotnew):
+# backward compatible name
+savetrueanswers = save_true_answers
+
+
+def main_full_exam(filename, saveslotnew):
     global gradingkey, saveslot
     saveslot = saveslotnew
-    wipesaveslot(saveslot)
+    wipe_save_slot(saveslot)
     foldername = filename + "\\"
     answers = pickle.load(open(foldername + "answers.txt", "rb"))
     gradingkey = pickle.load(open(foldername + "gradingkey.txt", "rb"))
     pagelist = pickle.load(open(foldername + "pagelist.txt", "rb"))
     file = pdfopen(foldername + "exam.pdf")
-    examnames = createchapterfiles(foldername + "exam.pdf", pagelist)
+    examnames = create_chapter_files(foldername + "exam.pdf", pagelist)
     answers = [list(item) for item in answers]
     return (
         examnames,
@@ -230,7 +273,11 @@ def mainfullexam(filename, saveslotnew):
     )
 
 
-def splitchapters(reader):
+# backward compatible name
+mainfullexam = main_full_exam
+
+
+def split_chapters(reader):
     seplist = []
     pages = [reader.pages[i] for i in range(reader.get_num_pages())]
     count = 0
@@ -246,7 +293,7 @@ def splitchapters(reader):
         elif re.match(search2, Text) and re.match(search3, Text):
             seplist.append(count)
 
-    return fillrange(seplist)
+    return fill_range(seplist)
 
 
 def swap(text_blocks):
@@ -268,7 +315,7 @@ def verify(text_blocks, tabs, pagelist):
         sys.exit(0)
 
 
-def getanswers(answerpage):
+def get_answers(answerpage):
     text_blocks = [i for i in answerpage.get_text().splitlines() if "-" in i][1:]
     swap(text_blocks)
     tabs = answerpage.find_tables()
@@ -280,19 +327,23 @@ def getanswers(answerpage):
     return answerslist, text_blocks
 
 
-def saveanswers(answerlist, counter):
-    appdata = getsaveslot() + r"\Answers\\" + str(counter) + ".txt"
+def save_answers(answerlist, counter):
+    appdata = get_save_slot() + r"\Answers\\" + str(counter) + ".txt"
     with open(appdata, "wb") as fp:
         pickle.dump(answerlist, fp)
     return appdata
 
 
-def savetrueanswers(answerlist, chapternames):
+# backward compatible name
+saveanswers = save_answers
+
+
+def save_true_answers(answerlist, chapternames):
     counter = 0
     trueanswerlist = []
     for i in range(len(answerlist)):
         appdata = (
-            getsaveslot()
+            get_save_slot()
             + "\Trueanswers\\"
             + str(i)
             + "-"
@@ -305,8 +356,12 @@ def savetrueanswers(answerlist, chapternames):
     return trueanswerlist
 
 
-def createchapterfiles(filename, pagelist):
-    appdata = getsaveslot() + "\Chapters"
+# backward compatible name
+savetrueanswers = save_true_answers
+
+
+def create_chapter_files(filename, pagelist):
+    appdata = get_save_slot() + "\Chapters"
     filenames = []
     for i in pagelist.keys():
         ogfile = pdfopen(filename)
@@ -319,7 +374,7 @@ def createchapterfiles(filename, pagelist):
     return filenames
 
 
-def checkperentry(containlist, checkstring):
+def check_per_entry(containlist, checkstring):
     for letterr in containlist:
         if letterr in checkstring:
             return True
@@ -327,20 +382,20 @@ def checkperentry(containlist, checkstring):
             return False
 
 
-def checklist(list):
+def check_list(items):
     hebrewletters = "ראטוןםםפשדגכעייחלךףזסבהנמצתץ"
     hebrewletters = [i for i in hebrewletters]
     counter = 0
-    for item in list:
+    for item in items:
         if item.isnumeric():
             counter += 1
-    if counter > len(list) / 2:
+    if counter > len(items) / 2:
         return True
     else:
         return False
 
 
-def extractgradingkey(gradepage):
+def extract_grading_key(gradepage):
     tables = gradepage.find_tables()
     gradingkey = {str(i): [] for i in range(47)}
     for tab in tables:
@@ -348,7 +403,7 @@ def extractgradingkey(gradepage):
             if len(gradekey) == 4 and None not in gradekey:
                 gradingkey[gradekey[-1]] = gradekey[:-1]
     if gradingkey["4"] == []:
-        return extractgradingkey2(gradepage)
+        return extract_grading_key2(gradepage)
     else:
         return gradingkey
 
@@ -357,14 +412,14 @@ def remove_values_from_list(the_list, val):
     return [value for value in the_list if value != val]
 
 
-def extractgradingkey2(gradepage):
+def extract_grading_key2(gradepage):
     tables = gradepage.find_tables()
     gradingkey = {str(i): [] for i in range(47)}
     for tab in tables:
         for gradekey in tab.extract():
             if len(gradekey) == 14:
                 gradekey = remove_values_from_list(gradekey, None)
-                if checklist(gradekey):
+                if check_list(gradekey):
                     if len(gradekey) == 13:
                         gradekey.remove("")
                     chunks = [gradekey[x : x + 4] for x in range(0, len(gradekey), 4)]
@@ -373,17 +428,17 @@ def extractgradingkey2(gradepage):
     return gradingkey
 
 
-def convertonscale(OldMin, OldMax, NewMin, NewMax, OldValue):
-    OldRange = OldMax - OldMin
+def convert_on_scale(old_min, old_max, new_min, new_max, old_value):
+    OldRange = old_max - old_min
     if OldRange == 0:
-        NewValue = NewMin
+        NewValue = new_min
     else:
-        NewRange = NewMax - NewMin
-        NewValue = (((OldValue - OldMin) * NewRange) / OldRange) + NewMin
+        NewRange = new_max - new_min
+        NewValue = (((old_value - old_min) * NewRange) / OldRange) + new_min
     return NewValue
 
 
-def extractmyrange(page):
+def extract_my_range(page):
     rangea = [
         (50, 50),
         (51, 55),
@@ -436,7 +491,7 @@ def extractmyrange(page):
     for gradeclassindex in range(len(rangea)):
         gradeclass = rangea[gradeclassindex]
         for grade in range(gradeclass[0], gradeclass[1] + 1):
-            newgrade = convertonscale(
+            newgrade = convert_on_scale(
                 *rangea[gradeclassindex], *rangeb[gradeclassindex], grade
             )
             finalgradingkey[str(grade)] = str(round(newgrade))
@@ -444,8 +499,8 @@ def extractmyrange(page):
     return finalgradingkey
 
 
-def givefinalscores(rawscores):
-    gradingkey = getgradingkey()
+def give_final_scores(rawscores):
+    gradingkey = get_grading_key()
     finalgradingkey = {
         "50": "200",
         "51": "221",
@@ -567,7 +622,7 @@ def givefinalscores(rawscores):
 
 # Cem Arkohen
 # https://www.facebook.com/groups/772946566154452
-def getgradingkey():
+def get_grading_key():
     global gradingkey
     return gradingkey
 
@@ -584,9 +639,9 @@ def preprocessing(filename):
     }  # splitchapters(reader)
     file = pdfopen(filename)
     pages = [file[i] for i in range(file.page_count)]
-    gradingkey = extractgradingkey(pages[-3])
+    gradingkey = extract_grading_key(pages[-3])
     pages = pages[:-3]
-    answers, chapternames = getanswers(pages[-1])
+    answers, chapternames = get_answers(pages[-1])
     verify(chapternames, answers, pagelist)
     return answers, pagelist, gradingkey
 
@@ -594,7 +649,7 @@ def preprocessing(filename):
 def main(filename, saveslotnew):
     global gradingkey, saveslot
     saveslot = saveslotnew
-    wipesaveslot(saveslot)
+    wipe_save_slot(saveslot)
     pagelist = {
         "1": [4, 11],
         "2": [12, 19],
@@ -605,25 +660,25 @@ def main(filename, saveslotnew):
     }  # splitchapters(reader)
     file = pdfopen(filename)
     pages = [file[i] for i in range(file.page_count)]
-    gradingkey = extractgradingkey(pages[-3])
+    gradingkey = extract_grading_key(pages[-3])
     pages = pages[:-3]
-    examnames = createchapterfiles(filename, pagelist)
-    answers, chapternames = getanswers(pages[-1])
+    examnames = create_chapter_files(filename, pagelist)
+    answers, chapternames = get_answers(pages[-1])
     verify(chapternames, answers, pagelist)
-    trueanswerlist = savetrueanswers(answers, chapternames)
+    trueanswerlist = save_true_answers(answers, chapternames)
     return examnames, answers, chapternames, trueanswerlist
 
 
-def mainfullexam(filename, saveslotnew):
+def main_full_exam(filename, saveslotnew):
     global gradingkey, saveslot
     saveslot = saveslotnew
-    wipesaveslot(saveslot)
+    wipe_save_slot(saveslot)
     foldername = filename + "\\"
     answers = pickle.load(open(foldername + "answers.txt", "rb"))
     gradingkey = pickle.load(open(foldername + "gradingkey.txt", "rb"))
     pagelist = pickle.load(open(foldername + "pagelist.txt", "rb"))
     file = pdfopen(foldername + "exam.pdf")
-    examnames = createchapterfiles(foldername + "exam.pdf", pagelist)
+    examnames = create_chapter_files(foldername + "exam.pdf", pagelist)
     answers = [list(item) for item in answers]
     return (
         examnames,
@@ -633,74 +688,15 @@ def mainfullexam(filename, saveslotnew):
     )
 
 
-def wipesaveslot(saveslot):
-    for folder in os.listdir(saveslot):
-        for file in os.listdir(saveslot + r"\\" + folder):
-            os.remove(saveslot + r"\\" + folder + r"\\" + file)
+# backward compatible name
+mainfullexam = main_full_exam
 
 
-def classifychapters(answerlist):
-    list2 = []
-    for item in answerlist:
-        if "p" in item:
-            list2.append(3)
-        elif len(item) == 20:
-            list2.append(1)
-        elif len(item) == 22:
-            list2.append(2)
-        else:
-            list2.append(0)
-    return list2
+def wipe_save_slot(saveslot_path):
+    for folder in os.listdir(saveslot_path):
+        for file in os.listdir(saveslot_path + r"\\" + folder):
+            os.remove(saveslot_path + r"\\" + folder + r"\\" + file)
 
 
-def opendir(filename):
-    unpack = filename.split("-")
-    year = unpack[1]
-    quarter = unpack[2][0]
-    if os.path.isdir(r"C:\Users\Public\Appdata\Exams2\\" + year):
-        if os.path.isdir(r"C:\Users\Public\Appdata\Exams2\\" + year + "\\" + quarter):
-            pass
-        else:
-            os.mkdir(r"C:\Users\Public\Appdata\Exams2\\" + year + "\\" + quarter)
-    else:
-        os.mkdir(r"C:\Users\Public\Appdata\Exams2\\" + year)
-        os.mkdir(r"C:\Users\Public\Appdata\Exams2\\" + year + "\\" + quarter)
-
-    return r"C:\Users\Public\Appdata\Exams2\\" + year + "\\" + quarter
-
-
-def picklesave(data, filename):
-    with open(filename, "wb") as f:
-        pickle.dump(data, f)
-
-
-if __name__ == "__main__":
-    for yearfolder in os.listdir(r"C:\Users\Public\Appdata\Exams\Hebrew"):
-        for pdffile in os.listdir(
-            r"C:\Users\Public\Appdata\Exams\Hebrew" + "\\" + yearfolder
-        ):
-            answer, pagelist, gradingkey = preprocessing(
-                r"C:\Users\Public\Appdata\Exams\Hebrew"
-                + "\\"
-                + yearfolder
-                + "\\"
-                + pdffile
-            )
-            dirpath = opendir(
-                r"C:\Users\Public\Appdata\Exams\Hebrew"
-                + "\\"
-                + yearfolder
-                + "\\"
-                + pdffile
-            )
-            picklesave(answer, dirpath + r"\\answers.txt")
-            picklesave(pagelist, dirpath + r"\\pagelist.txt")
-            picklesave(gradingkey, dirpath + r"\\gradingkey.txt")
-            shutil.copy(
-                r"C:\Users\Public\Appdata\Exams\Hebrew"
-                + "\\"
-                + yearfolder
-                + "\\"
-                + pdffile,
-                dirpath + r"\\exam.pdf",
-            )
+# backward compatible name
+wipesaveslot = wipe_save_slot

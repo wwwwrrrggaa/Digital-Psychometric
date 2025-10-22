@@ -1,91 +1,118 @@
 # DigitalPsychometric
 
-![image](https://github.com/user-attachments/assets/d82d8e70-5de9-4372-8d47-995eb1edc35e)
+A small tool for digitizing printed psychometric exams and running exam simulations with a simple GUI.
 
+This project helps convert exam PDFs and their answer keys into an interactive simulation environment. It's lightweight and intended to run locally with a minimal setup.
 
-DigitalPsychometric is a tool for digitizing printed psychometric exams and making the simulation process easier.
+<!-- Replace the full-size markdown image with a smaller display that links to the original -->
+<p align="center">
+  <a href="img.png" target="_blank">
+    <img src="img.png" alt="screenshot" width="1000" style="max-width:100%; height:auto;" />
+  </a>
+</p>
 
+---
 
+## Quick overview
 
-## Getting Started:
+- Purpose: run simulated psychometric exams from scanned or pre-made exam PDFs and manage saves/answers.
+- GUI: built with PySide6.
+- PDF handling: uses PyMuPDF (fitz).
 
-### Dependencies
-python 3.x
+---
 
-pyside 6
+## Features
 
-pymupdf
+- Load exams from the `Exams/` or `FullExams/` folders.
+- Save and resume exam sessions via the `Saves/` folder.
+- Grade answers using extracted grading keys.
+- Bundle the app into a single executable using Nuitka (optional).
 
-all the required data folders inside the same directory 
+---
 
-nuitka in order to compile
+## Requirements
 
-I used conda to build a virtual env for the project myself
+- Python 3.8+ (3.12 is known to work in the author's environment)
+- PySide6
+- PyMuPDF (imported as `fitz`)
+- (Optional) Nuitka to build a standalone executable
 
-### Installation
+Suggested pip install:
 
-1. Clone the repository:
-   ```bash
-    git clone https://github.com/yourusername/Digital-Psychometric.git
-2. Navigate to the project directory:
-    cd OnlinePsychometric
-3. Install the required dependencies
-4. Add the Data directories from https://drive.google.com/drive/folders/1DxCrBljnnyhWbiiAIq769l2jRjxZ2rUf?usp=drive_link
-5. Activate the virtual environment:
-    conda activate OnlinePsychometric
-
-
-### Usage
-Run start.py to start into the gui
-
-
-### Build
-To build the project into a standalone exe, use the following commands on an existing conda env with the required dependencies:
-``` bash
-conda activate OnlinePsychometric
-python -m nuitka --follow-imports --standalone --disable-console --onefile --enable-plugin=pyside6 --include-data-dir=C:\Users\yonat\PycharmProjects\OnlinePsychometric2\Data= C:\Users\yonat\pycharmprojects\OnlinePsychometric2\start.py
+```bash
+pip install pyside6 pymupdf
 ```
 
-## About the project
+If you prefer conda (author used conda):
 
-### How this works
+```bash
+conda create -n OnlinePsychometric python=3.12
+conda activate OnlinePsychometric
+pip install pyside6 pymupdf
+```
 
-The project is structured around five key files, each serving a specific purpose:
+---
 
-1. **start.py**:
-   - This file serves as the entry point for the application. It initializes the GUI and allows the user to choose from starting a new exam and loading from a save finally calling main.py .
+## Quick start
 
-2. **main.py**:
-   - This file calls the gui and logic for processing an exam and displaying it to the user. the main logic function is called per each chapter in the exam until it calls end.py
+From the project root, run:
 
-3. **end.py**:
-   - This file displays the end stats after a user finishes the exam and then calculates the required grades.
-4. **pdfbackend.py**:
-   - This file contains the basic pdf and backedn logic required to extract the required information from the data directories and transfer it accordingly, it is also contains logic to save the generated data.
+```bash
+python start.py
+```
 
-5. **Exampreprocessing.py**:
-   - This file contains preprocessing logic for the exams. It handles tasks such as extracting data from PDFs, organizing the data into a usable format, and preparing the exams for simulation, basically what's required to create all exam folders .
+This opens the GUI. Use the interface to start a new exam or load a save from `Saves/`.
 
-other files are basicly the pyside gui
-]()
-### Todo List
+You can also run the compiled `DigitalPsychometric.exe` if you built the project with Nuitka.
 
-- [v] Work on any computer (bundle files with exe)
-- [v] Give correct Hebrew score without essay
-- [V] More save slots
-- [v] Remove bad UI elements
-- [v] Show actual grade
-- [v] Shuffle chapters
-- [ ] Resume from save (Now)
-- [V] Campus IL version
-- [x] Bug fixes
-- [ ] Manual checks (After Now)
-- [ ] Essay grader (future version)
-- [v] End screen
-- [ ] Refactor code and publish?
+Note: The compiled executable is not included in this repository due to file size limits. Please build it locally using the instructions below.
 
+---
 
-written with the help of chatgpt
+## Build (optional — Windows example)
 
-![image](https://github.com/user-attachments/assets/7159d054-e673-4ab7-b24a-9c3a4cfcf6b1)
+To create a single-file executable using Nuitka (example for Windows/cmd.exe). Run this command from the project root directory.
 
+Example (single-line command):
+
+```bash
+python -m nuitka --follow-imports --standalone --disable-console --onefile --enable-plugin=pyside6 --include-data-dir="Saves=Saves" --include-data-dir="Exams=Exams" --include-data-dir="FullExams=FullExams" --output-filename=DigitalPsychometric start.py
+Notes:
+- `--include-data-dir="SOURCE=TARGET"` maps a folder from disk into the bundled app. The `SOURCE` must exist when you run Nuitka, otherwise you'll get a `malformed '--include-data-dir'` error.
+- This assumes you are running the command from the project root where `Saves/` exists.
+
+---
+
+## Project layout (important files)
+
+- `start.py` — application entry point; initializes the GUI and launches `main.py`.
+- `main.py` — main exam flow and UI coordination (runs per chapter and calls `end.py`).
+- `end.py` — shows the final stats and grading summary after the exam.
+- `pdfbackend.py` — PDF handling and save/load logic.
+- `Exampreprocessing.py` — preprocessing utilities to extract and organize PDF data into exam folders.
+- `ui_mainwindow.py`, `mainwindow.py`, `zoomselector.py` — PySide GUI files and helpers.
+
+There are example folders under `Exams/`, `FullExams/`, and a `Saves/` folder with sample save slots.
+
+---
+
+## Todo / Roadmap
+
+- Manual checks (post-release)
+- Essay grader (future)
+- Refactor and publish (clean-up and packaging)
+
+(Completed items are already in the repo history.)
+
+---
+
+<!-- Replace the bottom markdown image with a smaller display as well -->
+<p align="center">
+  <a href="img_1.png" target="_blank">
+    <img src="img_1.png" alt="screenshot 2" width="1000" style="max-width:100%; height:auto;" />
+  </a>
+</p>
+
+---
+
+Written by the project author (with some help from automation).

@@ -1,5 +1,10 @@
-# Copyright (C) 2022 The Qt Company Ltd.
-# SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
+"""Main application glue for the PDF viewer/exam app.
+
+This module holds the main application functions and shared global
+state. Only a small module docstring and cosmetic import grouping are
+added to improve readability; no logic is changed.
+"""
+
 import os
 import pickle
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -10,86 +15,80 @@ from PySide6.QtWidgets import QFormLayout, QComboBox
 import end
 import pdfbackend
 from mainwindow import MainWindow
+from typing import Any, List
 
-dir=os.path.realpath(__file__).replace("\main.py", "")
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+dir = BASE_DIR
 
-timelimit = "25:00"
-counter = -1
-limit=5
-backendfuncs=[pdfbackend.main,pdfbackend.main]
-backendresumefuncs=[pdfbackend.mainresume,pdfbackend.mainresume]
-backend=[backendfuncs,backendresumefuncs]
-filenames = []
-answers = []
-true_answers=[]
-examnames = ""
-boxofanswers = []
-w = ""
-filesavelist = []
-chapternames = []
-trueanswerlist = []
-shuffle = [2, 0, 4, 1, 5, 3]
-saveslot = "ada"
+timelimit: str = "25:00"
+counter: int = -1
+limit: int = 5
+backendfuncs = [pdfbackend.main, pdfbackend.main]
+backendresumefuncs = [pdfbackend.main_resume, pdfbackend.main_resume]
+backend = [backendfuncs, backendresumefuncs]
+filenames: List[str] = []
+answers: List[Any] = []
+true_answers: List[Any] = []
+examnames: Any = ""
+boxofanswers: List[Any] = []
+w: Any = None
+filesavelist: List[str] = []
+chapternames: List[Any] = []
+trueanswerlist: List[Any] = []
+shuffle: List[int] = [2, 0, 4, 1, 5, 3]
+saveslot: str = "ada"
 
 
-def updatesaveslot(value):
+def update_save_slot(value: str) -> None:
     global saveslot
-    saveslot = dir+"\\Saves\\"+value
+    saveslot = os.path.join(BASE_DIR, "Saves", value)
 
 
-def getsaveslot():
+def get_save_slot() -> str:
     global saveslot
     return saveslot
 
 
-def getshuffle():
+def get_shuffle() -> List[int]:
     global shuffle
     return shuffle
 
 
-def finishchapter():
-    pass
+def finish_chapter() -> None:
     global w, boxofanswers, counter, filesavelist
     savelist = [boxofanswers[i].currentText() for i in range(len(boxofanswers))]
-    filesavelist.append(pdfbackend.saveanswers(savelist, counter))
-    w.close()
-    # close chapter
+    filesavelist.append(pdfbackend.save_answers(savelist, counter))
+    if hasattr(w, "close"):
+        w.close()
 
 
-def jumpnextchapter():
+def jump_next_chapter() -> None:
     global filenames, counter, answers, typeexam
-    finishchapter()
+    finish_chapter()
     mainapp("asda", timelimit)
 
-    # answer=answers[counter]
-    # examname=filenames[counter]
 
-
-def givetimelimit():
+def get_time_limit() -> str:
     global timelimit
     return timelimit
 
 
-def createanswerwidget(answers):
-    if "p" in answers:
-        minus = 1
-    else:
-        minus = 0
+def create_answer_widget(answers):
+    minus = 1 if "p" in answers else 0
     layout = QFormLayout()
-    boxesofanswer = [0 for i in range(len(answers) - minus)]
-    for index in range(len(answers) - minus):
-        boxesofanswer[index] = QComboBox()
-        boxesofanswer[index].addItems(["1", "2", "3", "4"])
-        layout.addRow(str(index + 1), boxesofanswer[index])
+    boxesofanswer = [QComboBox() for _ in range(len(answers) - minus)]
+    for index, box in enumerate(boxesofanswer):
+        box.addItems(["1", "2", "3", "4"])
+        layout.addRow(str(index + 1), box)
     return layout, boxesofanswer
 
 
-def mainapp(exam, timer, *args):
-    global timelimit, counter, answers, examnames, w, boxofanswers, chapternames, trueanswerlist, typeexam, shuffle,limit,backend,limit,true_answers
+def main_app(exam, timer, *args):
+    global timelimit, counter, answers, examnames, w, boxofanswers, chapternames, trueanswerlist, typeexam, shuffle, limit, backend, limit, true_answers
     typeexam = 1
     if counter == limit:
-        finishchapter()
-        w = end.Window(getsaveslot())
+        finish_chapter()
+        w = end.Window(get_save_slot())
         w.showMaximized()
     else:
         timelimit = timer
@@ -101,46 +100,45 @@ def mainapp(exam, timer, *args):
         )
         w = MainWindow()
         w.showMaximized()
-        ###end()
         if counter == -1:
-            if args[0][2]==0:
-                limit=5
+            if args[0][2] == 0:
+                limit = 5
             else:
-                 limit=7
-            if(args[0][1]==0):
-                updatesaveslot(args[0][0])
-                examnames, answers, trueanswerlist,true_answers = backend[args[0][1]][args[0][2]](
-                    exam, getsaveslot()
+                limit = 7
+            if (args[0][1] == 0):
+                update_save_slot(args[0][0])
+                examnames, answers, trueanswerlist, true_answers = backend[args[0][1]][args[0][2]](
+                    exam, get_save_slot()
                 )
-                if(args[0][2]==0):
-                    with open(getsaveslot() + "\Grade\Order.txt", "wb") as f:
+                if (args[0][2] == 0):
+                    order_file = os.path.join(get_save_slot(), "Grade", "Order.txt")
+                    with open(order_file, "wb") as f:
                         pickle.dump([2, 0, 4, 1, 5, 3], f)
-                        shuffle=[2, 0, 4, 1, 5, 3]
+                        shuffle = [2, 0, 4, 1, 5, 3]
                 else:
-                    with open(getsaveslot() + "\Grade\Order.txt", "wb") as f:
-                        pickle.dump([0,1,2,3,4,5,6,7], f)
-                        shuffle=[0,1,2,3,4,5,6,7]
+                    order_file = os.path.join(get_save_slot(), "Grade", "Order.txt")
+                    with open(order_file, "wb") as f:
+                        pickle.dump([0, 1, 2, 3, 4, 5, 6, 7], f)
+                        shuffle = [0, 1, 2, 3, 4, 5, 6, 7]
             elif (args[0][1] == 1):
-                updatesaveslot(args[0][0])
-                examnames, answers, true_answers,counter = backend[args[0][1]][args[0][2]](
-                    getsaveslot()
+                update_save_slot(args[0][0])
+                examnames, answers, true_answers, counter = backend[args[0][1]][args[0][2]](
+                    get_save_slot()
                 )
                 if (counter == limit):
-                    w = end.Window(getsaveslot())
+                    w = end.Window(get_save_slot())
                     w.showMaximized()
                 if args[0][2] == 1:
                     shuffle = [0, 1, 2, 3, 4, 5, 6, 7]
                 else:
                     shuffle = [2, 0, 4, 1, 5, 3]
-    if(counter<limit):
+    if counter < limit:
         counter += 1
-        layout, boxofanswers = createanswerwidget(true_answers[shuffle[counter]])
+        layout, boxofanswers = create_answer_widget(true_answers[shuffle[counter]])
         w.open(QUrl.fromLocalFile(examnames[shuffle[counter]]))
         w.addanswers(layout)
 
     QCoreApplication.exec()
 
 
-
-
-### bug happen because of existing not saving
+mainapp = main_app

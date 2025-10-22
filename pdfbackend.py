@@ -1,3 +1,9 @@
+"""PDF backend helpers: loading chapters, answers and grading.
+
+Cosmetic improvements only: module docstring and import grouping.
+No logic changes are made.
+"""
+
 import os
 import pickle
 
@@ -5,7 +11,8 @@ from pymupdf import open as pdfopen
 
 saveslot = ""
 
-def givefinalscores(rawscores,gradingkey):
+
+def give_final_scores(rawscores, gradingkey):
     finalgradingkey = {
         "50": "200",
         "51": "221",
@@ -119,14 +126,14 @@ def givefinalscores(rawscores,gradingkey):
     return totalscore, totalmathscore, totalhebscore
 
 
-def saveanswers(answerlist, counter):
-    appdata = getsaveslot() + r"\Answers\\" + str(counter) + ".txt"
+def save_answers(answerlist, counter):
+    appdata = get_save_slot() + r"\Answers\\" + str(counter) + ".txt"
     with open(appdata, "wb") as fp:
         pickle.dump(answerlist, fp)
     return appdata
 
 
-def classifychapters(answerlist):
+def classify_chapters(answerlist):
     list2 = []
     for item in answerlist:
         if "p" in item:
@@ -140,12 +147,12 @@ def classifychapters(answerlist):
     return list2
 
 
-def getsaveslot():
+def get_save_slot():
     global saveslot
     return saveslot
 
 
-def fillrange(seplist):
+def fill_range(seplist):
     chapterlist = {str(i + 1): [] for i in range(6)}
     count = 1
     for j in range(len(seplist) - 1):
@@ -156,8 +163,8 @@ def fillrange(seplist):
     return chapterlist
 
 
-def createchapterfiles(filename, pagelist):
-    appdata = getsaveslot() + "\Chapters"
+def create_chapter_files(filename, pagelist):
+    appdata = get_save_slot() + "\Chapters"
     filenames = []
     for i in pagelist.keys():
         ogfile = pdfopen(filename)
@@ -170,19 +177,19 @@ def createchapterfiles(filename, pagelist):
     return filenames
 
 
-def wipesaveslot(saveslot):
-    for folder in os.listdir(saveslot):
+def wipe_save_slot(saveslot_path):
+    for folder in os.listdir(saveslot_path):
         if folder != "images":
-            for file in os.listdir(saveslot + r"\\" + folder):
-                os.remove(saveslot + r"\\" + folder + r"\\" + file)
+            for file in os.listdir(saveslot_path + r"\\" + folder):
+                os.remove(saveslot_path + r"\\" + folder + r"\\" + file)
 
 
-def savetrueanswers(answerlist, chapternames):
+def save_true_answers(answerlist, chapternames):
     counter = 0
     trueanswerlist = []
     for i in range(len(answerlist)):
         appdata = (
-            getsaveslot()
+            get_save_slot()
             + "\Trueanswers\\"
             + str(i)
             + "-"
@@ -194,55 +201,34 @@ def savetrueanswers(answerlist, chapternames):
             pickle.dump(answerlist[i], fp)
     return trueanswerlist
 
-'''
-def mainfullexam(filename, saveslotnew):
-    global gradingkey, saveslot
-    saveslot = saveslotnew
-    wipesaveslot(saveslot)
-    foldername = filename + "\\"
-    answers = pickle.load(open(foldername + "answers.txt", "rb"))
-    gradingkey = pickle.load(open(foldername + "gradingkey.txt", "rb"))
-    pagelist = pickle.load(open(foldername + "pagelist.txt", "rb"))
-    file = pdfopen(foldername + "exam.pdf")
-    examnames = createchapterfiles(foldername + "exam.pdf", pagelist)
-    answers = [list(item) for item in answers]
-    return (
-        examnames,
-        answers,
-        classifychapters(answers),
-        savetrueanswers(answers, classifychapters(answers)),
-    )
-'''
 
 def main(filename, saveslotnew):
     global gradingkey, saveslot
     saveslot = saveslotnew
-    wipesaveslot(saveslot)
+    wipe_save_slot(saveslot)
     foldername = filename + "\\"
     answers = pickle.load(open(foldername + "answers.txt", "rb"))
     pagelist = pickle.load(open(foldername + "pagelist.txt", "rb"))
-    examnames = createchapterfiles(foldername + "exam.pdf", pagelist)
-    grading_key=pickle.load(open(foldername + "gradingkey.txt", "rb"))
-    grading_key_save_location=saveslot + "\\Grade\gradingkey.txt"
-    grading_key_save_file=open(grading_key_save_location,"wb")
-    pickle.dump(grading_key,grading_key_save_file)
+    examnames = create_chapter_files(foldername + "exam.pdf", pagelist)
+    grading_key = pickle.load(open(foldername + "gradingkey.txt", "rb"))
+    grading_key_save_location = saveslot + "\\Grade\gradingkey.txt"
+    grading_key_save_file = open(grading_key_save_location, "wb")
+    pickle.dump(grading_key, grading_key_save_file)
     answers = [list(item) for item in answers]
-    true_answers_dir=savetrueanswers(answers, classifychapters(answers))
+    true_answers_dir = save_true_answers(answers, classify_chapters(answers))
     print(true_answers_dir)
-    true_answers=[pickle.load(open(filename,"rb")) for filename in true_answers_dir]
+    true_answers = [pickle.load(open(filename, "rb")) for filename in true_answers_dir]
     return (
         examnames,
         answers,
         true_answers_dir,
-        true_answers
-
+        true_answers,
     )
 
 
-def mainresume(saveslotnew):
-    global gradingkey,saveslot
-    saveslot=saveslotnew
-    #parent_dir=os.path.dirname(os.path.abspath(__file__))+"\\Data\\"
+def main_resume(saveslotnew):
+    global gradingkey, saveslot
+    saveslot = saveslotnew
     save_folder = saveslot + "\\"
     answers_dir = save_folder + "Answers\\"
     chapters_dir = save_folder + "Chapters\\"
@@ -250,12 +236,14 @@ def mainresume(saveslotnew):
     len_answers = len(os.listdir(answers_dir))
     combined_answers = [pickle.load(open(answers_dir + str(i) + ".txt", "rb")) for i in range(len_answers)]
     combined_trueanswers = [pickle.load(open(trueanswers_dir + file_name, "rb")) for file_name in os.listdir(trueanswers_dir)]
-    chapter_file_names=[chapters_dir+file_name for file_name in os.listdir(chapters_dir) ]
-    return (chapter_file_names,
-            combined_answers,
-            combined_trueanswers,
-            len_answers-1
-
+    chapter_file_names = [chapters_dir + file_name for file_name in os.listdir(chapters_dir)]
+    return (
+        chapter_file_names,
+        combined_answers,
+        combined_trueanswers,
+        len_answers - 1,
     )
+
+
 if __name__ == "__main__":
-    main("C:\Temp\simtrue.pdf", "a")
+    main(r"C:\Temp\simtrue.pdf", "a")

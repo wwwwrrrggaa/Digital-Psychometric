@@ -87,7 +87,7 @@ class WinForm(QWidget):
             self.startBtn.setText("Pause")
 
     def endchapter(self):
-        main.jumpnextchapter()
+        main.jump_next_chapter()
 
 
 class Ui_MainWindow(object):
@@ -291,7 +291,7 @@ class Ui_MainWindow(object):
         self.mainToolBar.addAction(self.actionBack)
         self.mainToolBar.addAction(self.actionForward)
         global timelimit
-        self.mainToolBar.addWidget(WinForm(timelimit=main.givetimelimit()))
+        self.mainToolBar.addWidget(WinForm(timelimit=main.get_time_limit()))
 
         self.retranslateUi(MainWindow)
 
