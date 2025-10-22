@@ -46,8 +46,8 @@ pip install pyside6 pymupdf
 If you prefer conda (author used conda):
 
 ```bash
-conda create -n OnlinePsychometric python=3.12
-conda activate OnlinePsychometric
+conda create -n DigitalPsychometric python=3.12
+conda activate DigitalPsychometric
 pip install pyside6 pymupdf
 ```
 
@@ -77,6 +77,8 @@ Example (single-line command):
 
 ```bash
 python -m nuitka --follow-imports --standalone --disable-console --onefile --enable-plugin=pyside6 --include-data-dir="Saves=Saves" --include-data-dir="Exams=Exams" --include-data-dir="FullExams=FullExams" --output-filename=DigitalPsychometric start.py
+```
+
 Notes:
 - `--include-data-dir="SOURCE=TARGET"` maps a folder from disk into the bundled app. The `SOURCE` must exist when you run Nuitka, otherwise you'll get a `malformed '--include-data-dir'` error.
 - This assumes you are running the command from the project root where `Saves/` exists.
