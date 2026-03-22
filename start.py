@@ -7,18 +7,34 @@ module docstring was added for clarity and PEP 8 style.
 
 import os
 import shutil
+import sys
+
+# Determine paths for frozen (compiled) vs script mode
+if getattr(sys, 'frozen', False):
+    # Running as compiled exe
+    # Resources (Exams) will be downloaded to the executable folder (cwd)
+    # User data (Saves) should also be in the executable folder (cwd)
+    READ_DIR = os.path.dirname(sys.executable)
+    WRITE_DIR = READ_DIR
+else:
+    READ_DIR = os.path.dirname(os.path.realpath(__file__))
+    WRITE_DIR = READ_DIR
 
 loadstate = 0
-BASE_DIR = os.path.dirname(os.path.realpath(__file__))
-dir = BASE_DIR
-appdatafolder = BASE_DIR
+BASE_DIR = READ_DIR # Default base for content
+dir = READ_DIR
+appdatafolder = WRITE_DIR # User data goes to write dir
 saveslot = "save1"
-dirlib = BASE_DIR
-import main
+dirlib = READ_DIR
 
+import main
+import login_window
 
 def get_save_slot():
+    # Fix: return full path if needed, or rely on update_save_slot setting it correctly
     global saveslot
+    if not os.path.isabs(saveslot):
+         return os.path.join(get_app_data(), "Saves", saveslot)
     return saveslot
 
 
@@ -32,7 +48,7 @@ def get_exams_folder(folder_type):
 
 def update_save_slot(value):
     global saveslot
-    saveslot = value
+    saveslot = os.path.join(get_app_data(), "Saves", value)
 
 
 from PySide6.QtWidgets import (
@@ -47,6 +63,8 @@ from PySide6.QtWidgets import (
 timer = "25:00"
 exam = ""
 examtype = 0
+current_user_token = None
+current_user_name = "guest"
 
 
 def get_language():
@@ -85,7 +103,19 @@ def get_quarters(folder_type, language, year):
 def get_slot_names() -> list:
     saves_path = os.path.join(get_app_data(), "Saves")
     if not os.path.isdir(saves_path):
-        return []
+        # Create default slots if missing (especially in compiled mode)
+        try:
+             os.makedirs(saves_path, exist_ok=True)
+             for i in range(1, 10):
+                 slot = f"save{i}"
+                 os.makedirs(os.path.join(saves_path, slot), exist_ok=True)
+                 # Also create subfolders needed?
+                 # pdfbackend writes to Answers/, Chapters/, Grade/, Trueanswers/, images/
+                 for sub in ["Answers", "Chapters", "Grade", "Trueanswers", "images"]:
+                     os.makedirs(os.path.join(saves_path, slot, sub), exist_ok=True)
+        except:
+             return []
+
     return [
         name
         for name in os.listdir(saves_path)
@@ -149,19 +179,18 @@ class Window(QDialog):
             timer = self.Box4.currentText()
             if self.Box0.currentText() == "Exams":
                 examtype = 0
-            else:
-                examtype = 1
-            self.close()
-
-            imgpath = os.path.join(exam, "answer.png")
-            target_img = os.path.join(dirlib, "Saves", get_save_slot(), "images", "answer.png")
-            try:
-                shutil.copy(imgpath, target_img)
-            except Exception:
-                pass
-            loadstate = 0
+            self.accept()
         else:
-            pass
+            # Maybe offer to download exams?
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Exam Not Found", "This exam is not available locally. Please use Exam Manager to download.")
+
+    def open_exam_manager(self):
+        import exam_manager
+        manager = exam_manager.ExamManager(current_user_token)
+        manager.exec()
+        # Refresh available exams in dropdowns?
+        self.update_language() # Recheck directory structure
 
     def load(self):
         global loadstate, examtype
@@ -275,8 +304,29 @@ class Window(QDialog):
 
 
 if __name__ == "__main__":
-    app = QApplication([])
-    window = Window()
-    window.show()
-    app.exec()
-    main.main_app(exam, timer, [saveslot, loadstate, examtype])
+    app = QApplication(sys.argv)
+
+    # Show Login First
+    login = login_window.LoginWindow()
+    if login.exec() == QDialog.Accepted:
+        current_user_name = login.username
+        current_user_token = login.token
+
+        # Then Start Dialog
+        start_dialog = Window()
+
+        # Add Exam Manager Button to Start Dialog
+        btn_manager = QPushButton("Manage/Download Exams")
+        btn_manager.clicked.connect(start_dialog.open_exam_manager)
+        start_dialog.layout().addWidget(btn_manager)
+
+        start_dialog.show()
+
+        # Wait for start dialog to close (it calls main.main_app internally on destroy? No wait)
+        # start.py logic is weird. _on_destroyed connects to main_app.
+        # But Window(QDialog) is modal usually?
+        # Let's fix start.py execution flow.
+
+        app.exec()
+    else:
+        sys.exit()

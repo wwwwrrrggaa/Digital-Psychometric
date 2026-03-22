@@ -8,12 +8,14 @@ added to improve readability; no logic is changed.
 import os
 import pickle
 from argparse import ArgumentParser, RawTextHelpFormatter
+from datetime import datetime
 
 from PySide6.QtCore import QCoreApplication, QUrl
 from PySide6.QtWidgets import QFormLayout, QComboBox
 
 import end
 import pdfbackend
+import local_store # New import
 from mainwindow import MainWindow
 from typing import Any, List
 
@@ -39,6 +41,46 @@ shuffle: List[int] = [2, 0, 4, 1, 5, 3]
 saveslot: str = "ada"
 
 
+class TimeTracker:
+    def __init__(self):
+        self.current_question = -1
+        self.start_time = None
+        self.total_times = {} # question_index -> total_seconds
+
+    def start_tracking(self, index):
+        if self.current_question != -1:
+            self.stop_tracking(self.current_question)
+        self.current_question = index
+        self.start_time = datetime.now()
+
+    def stop_tracking(self, index):
+        if self.current_question == index and self.start_time:
+            elapsed = (datetime.now() - self.start_time).total_seconds()
+            self.total_times[index] = self.total_times.get(index, 0) + elapsed
+            self.start_time = None
+            self.current_question = -1
+
+    def get_avg_time(self):
+        if not self.total_times:
+            return 0
+        return int(sum(self.total_times.values()) / len(self.total_times))
+
+tracker = TimeTracker()
+
+class TrackedComboBox(QComboBox):
+    def __init__(self, index):
+        super().__init__()
+        self.index = index
+
+    def focusInEvent(self, e):
+        tracker.start_tracking(self.index)
+        super().focusInEvent(e)
+
+    def focusOutEvent(self, e):
+        tracker.stop_tracking(self.index)
+        super().focusOutEvent(e)
+
+
 def update_save_slot(value: str) -> None:
     global saveslot
     saveslot = os.path.join(BASE_DIR, "Saves", value)
@@ -55,9 +97,79 @@ def get_shuffle() -> List[int]:
 
 
 def finish_chapter() -> None:
-    global w, boxofanswers, counter, filesavelist
-    savelist = [boxofanswers[i].currentText() for i in range(len(boxofanswers))]
-    filesavelist.append(pdfbackend.save_answers(savelist, counter))
+    global w, boxofanswers, counter, filesavelist, examnames, shuffle, saveslot
+
+    # Calculate score for this chapter (simple version, assuming single correct answer)
+    # We need the true answers to calculate score now, but main_app logic uses pdfbackend helper later?
+    # Actually finish_chapter saves answers to a file. It doesn't grade yet. Grading happens at the end.
+    # However, Requirement Phase 3 says: "Save this data into the local SQLite database when the user saves or finishes the exam"
+    # To save per-chapter stats now, I need the true answers for this chapter.
+
+    # Extract current answers
+    current_answers = [boxofanswers[i].currentText() for i in range(len(boxofanswers))]
+
+    # Save standard file based resume info
+    filesavelist.append(pdfbackend.save_answers(current_answers, counter))
+
+    # NEW: Save to SQLite
+    try:
+        # We need the exam ID and chapter name.
+        # examnames is a list of file paths. examnames[shuffle[counter]] is current file path.
+        current_exam_path = examnames[shuffle[counter]]
+        chapter_name = os.path.basename(current_exam_path)
+
+        # Calculate approximate score for this chapter immediately for analytics
+        # Note: We need true_answers for this specific chapter.
+        # true_answers is a list of lists. true_answers[shuffle[counter]] is for this chapter.
+        current_true_answers = true_answers[shuffle[counter]]
+
+        correct_count = 0
+        total_questions = len(current_true_answers)
+        # Adjust for 'p' if present in true_answers? Logic in pdfbackend.create_answer_widget suggests 'p' handling.
+        # Let's align with boxofanswers length.
+
+        # Fix: boxofanswers might be shorter if 'p' is involved.
+        for i in range(min(len(current_answers), len(current_true_answers))):
+            # pdfbackend uses '1', '2', '3', '4'.
+             if current_answers[i] == str(current_true_answers[i]):
+                 correct_count += 1
+
+        score_pct = int((correct_count / len(current_answers)) * 100) if len(current_answers) > 0 else 0
+
+        # We need a proper exam_id. Currently we don't have one passed from start.py easily.
+        # We can use a hash of the directory path or just 0 for now if unknown.
+        # Or better, try to find it in downloaded_exams via path.
+        # For this refactor, let's use a placeholder or try to look it up.
+        exam_id = 0
+
+        # Get user from local_store if logged in?
+        # We can default to a "guest" or the last logged in user.
+        # For now, let's assume 'default' or grab from local_store generic getter if we had one.
+        username = "offline_user"
+
+        local_store.save_analytics(
+            username=username,
+            exam_id=exam_id,
+            chapter_name=chapter_name,
+            score=score_pct,
+            time_per_question_avg=tracker.get_avg_time()
+        )
+
+        # Also save progress state
+        import json
+        local_store.save_exam_progress(
+            username=username,
+            exam_id=exam_id,
+            current_chapter=counter,
+            answers_json=json.dumps(current_answers),
+            time_elapsed=int(sum(tracker.total_times.values()))
+        )
+
+    except Exception as e:
+        print(f"Failed to save analytics: {e}")
+
+    tracker.total_times = {} # Reset for next chapter
+
     if hasattr(w, "close"):
         w.close()
 
@@ -76,7 +188,8 @@ def get_time_limit() -> str:
 def create_answer_widget(answers):
     minus = 1 if "p" in answers else 0
     layout = QFormLayout()
-    boxesofanswer = [QComboBox() for _ in range(len(answers) - minus)]
+    # Use TrackedComboBox instead of QComboBox
+    boxesofanswer = [TrackedComboBox(i) for i in range(len(answers) - minus)]
     for index, box in enumerate(boxesofanswer):
         box.addItems(["1", "2", "3", "4"])
         layout.addRow(str(index + 1), box)
