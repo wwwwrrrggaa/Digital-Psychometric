@@ -39,6 +39,7 @@ chapternames: List[Any] = []
 trueanswerlist: List[Any] = []
 shuffle: List[int] = [2, 0, 4, 1, 5, 3]
 saveslot: str = "ada"
+typeexam: int = 0
 
 
 class TimeTracker:
@@ -175,9 +176,12 @@ def finish_chapter() -> None:
 
 
 def jump_next_chapter() -> None:
-    global filenames, counter, answers, typeexam
+    global filenames, counter, answers, typeexam, saveslot
     finish_chapter()
-    mainapp("asda", timelimit)
+    # Pass current state back to main_app re-entry
+    # args structure: [[save_slot, load_state, exam_type]]
+    # We use current global values. load_state can be 0 or 1, assuming 0 here as we just continue.
+    mainapp([[saveslot, 1, typeexam]], timelimit)
 
 
 def get_time_limit() -> str:
@@ -196,9 +200,11 @@ def create_answer_widget(answers):
     return layout, boxesofanswer
 
 
-def main_app(exam, timer, *args):
-    global timelimit, counter, answers, examnames, w, boxofanswers, chapternames, trueanswerlist, typeexam, shuffle, limit, backend, limit, true_answers
-    typeexam = 1
+def main_app(args, timer, exam_path=None):
+    global counter, limit, w, examnames, answers, trueanswers, true_answers, shuffle, typeexam
+    typeexam = 0
+    if args[0][2] == 1:
+        typeexam = 1
     if counter == limit:
         finish_chapter()
         w = end.Window(get_save_slot())
@@ -220,8 +226,9 @@ def main_app(exam, timer, *args):
                 limit = 7
             if (args[0][1] == 0):
                 update_save_slot(args[0][0])
+                # Use passed exam_path
                 examnames, answers, trueanswerlist, true_answers = backend[args[0][1]][args[0][2]](
-                    exam, get_save_slot()
+                    exam_path, get_save_slot()
                 )
                 if (args[0][2] == 0):
                     order_file = os.path.join(get_save_slot(), "Grade", "Order.txt")

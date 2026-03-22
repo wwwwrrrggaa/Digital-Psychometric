@@ -29,6 +29,7 @@ dirlib = READ_DIR
 
 import main
 import login_window
+import local_store
 
 def get_save_slot():
     # Fix: return full path if needed, or rely on update_save_slot setting it correctly
@@ -76,13 +77,16 @@ def get_language():
 
 def get_years(folder_type, language):
     path = os.path.join(get_exams_folder(folder_type), language)
+    # Check downloaded exams for this language and populate years
+    # Keep directory scan for robustness but prioritize or merge?
+    # Simple directory scan is fine if download puts them in right place.
     listyear = []
     if not os.path.isdir(path):
-        return listyear
+         return listyear
 
     for year in os.listdir(path):
         if os.path.isdir(os.path.join(path, year)):
-            listyear.append(year)
+             listyear.append(year)
     return listyear
 
 
@@ -92,11 +96,25 @@ def get_quarters(folder_type, language, year):
     if not os.path.isdir(path):
         return listquarter
     for quarter in os.listdir(path):
-        if len(quarter) == 1:
-            q = quarter
-        else:
-            q = quarter[-5]
-        listquarter.append(q)
+        # Handle simple folder names first
+        if os.path.isdir(os.path.join(path, quarter)) or os.path.exists(os.path.join(path, quarter)):
+             # Previous logic had weird slicing: if len(quarter) == 1: q=quarter else q=quarter[-5]
+             # This was likely for full filenames like "Hebrew-2024-2.pdf" -> '2'
+             # If we use folders, we just use the folder name.
+             if os.path.isdir(os.path.join(path, quarter)):
+                  listquarter.append(quarter)
+             else:
+                  # Fallback for file-based
+                  pass
+
+    # If empty, maybe try scanned files?
+    if not listquarter:
+        for f in os.listdir(path):
+             if f.endswith(".pdf"):
+                  # Try to extract quarter from filename if standardization exists
+                  # But our new download logic puts them in folders.
+                  pass
+
     return listquarter
 
 
@@ -138,6 +156,7 @@ def get_types():
 def get_save_slots():
     return get_all_slots()
 
+DARK_THEME_SS = """"""
 
 class Window(QDialog):
     def update_year(self):
@@ -175,15 +194,29 @@ class Window(QDialog):
             self.Box2.currentText(),
             self.Box3.currentText(),
         )
+        if not os.path.isdir(exam):
+            # Maybe offer to download exams?
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Exam Not Found", f"This exam is not available locally at {exam}. Please use Exam Manager to download.")
+            return # Don't start
+
+        # Check for required metadata files
+        if self.Box0.currentText() == "FullExams" or self.Box0.currentText() == "Exams":
+            required_files = ["answers.txt", "pagelist.txt"]
+            missing = [f for f in required_files if not os.path.exists(os.path.join(exam, f))]
+            if missing:
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.critical(self, "Invalid Exam", f"The exam files are incomplete (missing {', '.join(missing)}).\n\nIf you recently downloaded this exam, it might be corrupted or in raw format (PDF only).")
+                return
+
         if os.path.isdir(exam):
             timer = self.Box4.currentText()
             if self.Box0.currentText() == "Exams":
                 examtype = 0
             self.accept()
         else:
-            # Maybe offer to download exams?
-            from PySide6.QtWidgets import QMessageBox
-            QMessageBox.warning(self, "Exam Not Found", "This exam is not available locally. Please use Exam Manager to download.")
+             # Should be covered above
+             pass
 
     def open_exam_manager(self):
         import exam_manager
@@ -256,18 +289,26 @@ class Window(QDialog):
             self.Box0.activated.connect(self.update_language)
             self.Box1.activated.connect(self.update_year)
             self.Box2.activated.connect(self.update_quarter)
+
+            # Initial population of options based on default type
             self.update_language()
             self.update_year()
             self.update_quarter()
-            self.ButtonMode.setText("Load from save")
-            self.ButtonOk.setParent(None)
+
+            self.dialogLayout.addLayout(self.formLayout)
             self.ButtonOk = QPushButton(self.tr("Enter Exam"))
+            self.ButtonOk.setParent(None)
             self.dialogLayout.addWidget(self.ButtonOk)
             self.ButtonOk.clicked.connect(self.start)
+            self.ButtonMode.setText("Load from save")
 
     def __init__(self):
         super().__init__(parent=None)
         self.setWindowTitle("ChooseExam")
+
+        # Apply Global Dark Theme Stylesheet
+        self.setStyleSheet(DARK_THEME_SS)
+
         self.dialogLayout = dialogLayout = QVBoxLayout()
         self.formLayout = formLayout = QFormLayout()
         self.Box0 = QComboBox()
@@ -291,6 +332,11 @@ class Window(QDialog):
         self.Box1.activated.connect(self.update_year)
         self.Box2.activated.connect(self.update_quarter)
 
+        # Initial population of options based on default type
+        self.update_language()
+        self.update_year()
+        self.update_quarter()
+
         dialogLayout.addLayout(formLayout)
         self.ButtonOk = QPushButton(self.tr("Start Exam"))
         self.ButtonMode = QPushButton(self.tr("Load from save"))
@@ -302,9 +348,57 @@ class Window(QDialog):
         self.ButtonOk.clicked.connect(self.start)
         self.ButtonMode.clicked.connect(self.switch_mode)
 
+        # Reset Cache Button
+        self.btn_reset = QPushButton("Reset Cache (Delete all data)")
+        self.btn_reset.setStyleSheet("background-color: #dc3545; color: white; margin-top: 10px;")
+        self.btn_reset.clicked.connect(self.do_reset_cache)
+        dialogLayout.addWidget(self.btn_reset)
+
+    def do_reset_cache(self):
+        # We need password confirmation again? Or just warning since we are logged in?
+        # User is already past login. But destructive action usually requires confirmation.
+        # Since we don't store password in memory securely to reuse verify, prompt again?
+        # Or just big warning.
+        # Let's prompt for password to be safe, using a small dialog.
+
+        from PySide6.QtWidgets import QInputDialog, QLineEdit, QMessageBox
+
+        # Simple confirmation first
+        reply = QMessageBox.question(self, 'Reset Local Cache',
+                                     "Are you sure you want to delete all downloaded exams, saves, and progress? This cannot be undone.",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+        if reply == QMessageBox.Yes:
+              # Since we are already logged in (possibly), should we require re-auth?
+              # If guest, no password.
+              # If logged in user, maybe yes.
+              # But let's keep it simple: just reset if confirmed.
+              # Unless user wants password check as previous implementation.
+              # "reset local cache option(enter the password again and confirm to do so...)"
+
+              if current_user_name != "guest":
+                   pwd, ok = QInputDialog.getText(self, "Confirm Reset", "Enter your password to confirm:", QLineEdit.Password)
+                   if ok and pwd:
+                        local_user = local_store.get_local_user(current_user_name)
+                        if local_user and local_store.verify_password(pwd, local_user['hashed_password']):
+                             pass # Proceed
+                        else:
+                             QMessageBox.warning(self, "Error", "Invalid password.")
+                             return
+                   else:
+                        return
+
+              try:
+                  local_store.reset_all_data()
+                  QMessageBox.information(self, "Reset Complete", "Local cache has been reset. The application will close.")
+                  sys.exit()
+              except Exception as e:
+                  QMessageBox.critical(self, "Error", f"Failed to reset cache: {str(e)}")
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setStyleSheet(DARK_THEME_SS) # Apply to entire app
 
     # Show Login First
     login = login_window.LoginWindow()
@@ -317,16 +411,36 @@ if __name__ == "__main__":
 
         # Add Exam Manager Button to Start Dialog
         btn_manager = QPushButton("Manage/Download Exams")
+        btn_manager.setObjectName("updateBtn") # Re-use style if available or default to QPushButton
         btn_manager.clicked.connect(start_dialog.open_exam_manager)
         start_dialog.layout().addWidget(btn_manager)
 
-        start_dialog.show()
+        # start_dialog.show()
+        # app.exec()
+        # FIX: Use exec loop and check result to run main app
 
-        # Wait for start dialog to close (it calls main.main_app internally on destroy? No wait)
-        # start.py logic is weird. _on_destroyed connects to main_app.
-        # But Window(QDialog) is modal usually?
-        # Let's fix start.py execution flow.
+        if start_dialog.exec() == QDialog.Accepted:
+             # Construct args for main.main_app
+             # Arguments logic based on main.py analysis:
+             # If loading from save (resume):
+             # args = [[save_slot, 1, 0]] (assuming 1 is resume type, 0 is generic subtype)
+             # If new exam:
+             # args = [[save_slot, 0, 0]] (assuming 0 is new exam type, 0 is generic subtype)
 
-        app.exec()
+             # loadstate is global set in load()
+             # examtype is global set in start() / load()
+             # saveslot is global set in start() / load()
+             # saveslot path needs to be slot NAME?
+             # update_save_slot in main.py takes value and joins with path.
+             # so we pass slot name.
+
+             slot_name = os.path.basename(saveslot) if os.path.isabs(saveslot) else saveslot
+
+             args = [[slot_name, loadstate, examtype]] # Nested list as main.py does args[0][1]
+             # exam path is global 'exam'
+
+             # Run main app
+             main.main_app(args, timer, exam)
+
     else:
         sys.exit()

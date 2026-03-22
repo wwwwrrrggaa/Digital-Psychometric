@@ -17,6 +17,7 @@ class ExamManager(QDialog):
         self.setLayout(self.layout)
 
         self.lbl_title = QLabel("Available Exams")
+        self.lbl_title.setObjectName("header") # Match consistent header style
         self.layout.addWidget(self.lbl_title)
 
         self.list_exams = QListWidget()
@@ -29,7 +30,7 @@ class ExamManager(QDialog):
         self.layout_download = QHBoxLayout()
         self.lbl_pass = QLabel("Password:")
         self.txt_pass = QLineEdit()
-        self.txt_pass.setEchoMode(QLineEdit.EchoMode.Password)
+        # self.txt_pass.setEchoMode(QLineEdit.EchoMode.Password) # Passwords are NOT hidden now
         self.btn_download = QPushButton("Download Selected")
         self.btn_download.clicked.connect(self.download_exam)
 

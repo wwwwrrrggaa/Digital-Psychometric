@@ -45,15 +45,20 @@ def seed():
     for version in exam_dirs:
         version_path = os.path.join(base_data_dir, version)
         if not os.path.exists(version_path):
+            print(f"Version path not found: {version_path}")
             continue
+
+        print(f"\nProcessing {version}...")
 
         for language in os.listdir(version_path):
             lang_path = os.path.join(version_path, language)
-            if not os.path.isdir(lang_path): continue
+            if not os.path.isdir(lang_path):
+                continue
 
             for year in os.listdir(lang_path):
                 year_path = os.path.join(lang_path, year)
-                if not os.path.isdir(year_path): continue
+                if not os.path.isdir(year_path):
+                    continue
 
                 # Look for directories that might be exams (e.g. "1", "2", "3")
                 # and verify they contain answers.txt
@@ -63,20 +68,29 @@ def seed():
                         if "answers.txt" in os.listdir(item_path):
                             # This is an exam folder
                             exam_name = f"{language}-{year}-{item}"
-                            zip_filename = f"{exam_name}.zip"
+                            # Use unique ZIP filename per version to prevent overwriting
+                            zip_filename = f"{exam_name}-{version}.zip"
                             zip_path = os.path.join(zip_storage, zip_filename)
 
                             # Zip it if not exists
                             if not os.path.exists(zip_path):
-                                print(f"Zipping {item_path} to {zip_path}")
+                                print(f"  Zipping {item_path}")
                                 shutil.make_archive(zip_path.replace('.zip',''), 'zip', item_path)
 
                             # Add to DB
                             title = exam_name
 
-                            existing = db.query(Exam).filter(Exam.title == title).first()
-                            if not existing:
-                                print(f"Adding exam: {title}")
+                            # Update existing or create new - Check both title AND version
+                            existing = db.query(Exam).filter(Exam.title == title, Exam.version == version).first()
+
+                            if existing:
+                                # Update file paths to ensure they point to ZIP
+                                existing.filename = zip_path
+                                existing.file_path = zip_path
+                                existing.version = version
+                                print(f"  Updated: {title} ({version})")
+                            else:
+                                print(f"  Added: {title} ({version})")
                                 exam = Exam(
                                     title=title,
                                     name=title,
@@ -84,7 +98,7 @@ def seed():
                                     language=language,
                                     year=year,
                                     quarter=item,
-                                    filename=zip_path, # Server serves this
+                                    filename=zip_path,
                                     file_path=zip_path,
                                     password_hash=hashed_exam_pwd,
                                     is_premium=False
@@ -93,7 +107,7 @@ def seed():
                                 count += 1
 
     db.commit()
-    print(f"Seeded {count} exams.")
+    print(f"\nSeeding complete: {count} new exams added.")
     db.close()
 
 if __name__ == "__main__":

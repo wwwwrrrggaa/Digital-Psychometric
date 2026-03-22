@@ -5,9 +5,7 @@ import sys
 
 def build_for_platform(target_platform):
     """
-    Simulates a cross-platform build command generation.
-    Note: Nuitka generally requires being on the target OS to build for it.
-    However, we can generate the command strings for the user.
+    Simulates a cross-platform build command generation for instructions.
     """
     python_exe = "python" # Generic for instructions
 
@@ -16,36 +14,39 @@ def build_for_platform(target_platform):
         "--standalone",
     ]
 
+    # Shared Nuitka options across all platforms to prevent bloat
+    shared_options = [
+        "--enable-plugin=pyside6",
+        "--nofollow-import-to=scipy,pandas,numpy,matplotlib", # Prevent memory crashes
+        "start.py"
+    ]
+
     if target_platform == "windows":
-        cmd.append("--onefile")
-        output_name = "DigitalPsychometric.exe"
+        cmd.extend([
+            "--onefile",
+            "--windows-console-mode=disable", # Hides the black terminal window on launch
+            "--output-filename=DigitalPsychometric.exe"
+        ])
     elif target_platform == "macos":
-        cmd.append("--macos-create-app-bundle")
-        output_name = "DigitalPsychometric"
+        cmd.extend([
+            "--macos-create-app-bundle",
+            "--macos-app-mode=gui", # Ensures it runs as a standard Mac app
+            "--output-filename=DigitalPsychometric"
+        ])
     elif target_platform == "linux":
-        cmd.append("--onefile")
-        output_name = "DigitalPsychometric.bin"
+        cmd.extend([
+            "--onefile",
+            "--output-filename=DigitalPsychometric.bin"
+        ])
     else:
         return
 
-    cmd.extend([
-        "--enable-plugin=pyside6",
-        f"--output-filename={output_name}",
-        "--include-module=server.models",
-        "--include-module=server.database",
-        "--include-module=requests",
-        "--include-module=local_store",
-        "--include-module=network_manager",
-        "--include-module=exam_manager",
-        "--include-module=login_window",
-        "start.py"
-    ])
-
+    cmd.extend(shared_options)
     return " ".join(cmd)
 
 def build_all_instructions():
     print("="*60)
-    print("CROSS-PLATFORM BUILD INSTRUCTIONS")
+    print("CROSS-PLATFORM BUILD INSTRUCTIONS (NUITKA)")
     print("="*60)
     print("Note: Nuitka requires the target operating system to build the binary.")
     print("To generate all 3 versions, run these commands on the respective machines:\n")
@@ -61,53 +62,66 @@ def build():
     os.chdir(project_root)
     print(f"Working directory set to: {project_root}")
 
-    # Clean previous builds
-    for folder in ["build", "dist"]:
+    # Clean previous build artifacts that Nuitka creates
+    for folder in ["start.build", "start.dist", "start.onefile-build"]:
         if os.path.exists(folder):
-            print(f"Cleaning {folder}...")
-            shutil.rmtree(folder)
+            print(f"Cleaning old Nuitka artifact folder: {folder}...")
+            shutil.rmtree(folder, ignore_errors=True)
 
-    # Nuitka command
-    # Using sys.executable ensures we use the same python interpreter that ran this script
+    # Base Nuitka command using the current Python executable
     cmd = [
         sys.executable, "-m", "nuitka",
         "--standalone",
     ]
 
+    # Shared optimization and anti-bloat options
+    shared_options = [
+        "--enable-plugin=pyside6",
+        "--nofollow-import-to=scipy,pandas,numpy,matplotlib", # Crucial for Windows memory limits
+        "start.py"
+    ]
+
     # Platform specific options
     if sys.platform == "win32":
-        cmd.append("--onefile")
+        cmd.extend([
+            "--onefile",
+            "--windows-console-mode=disable", # Hides the terminal window
+            "--output-filename=DigitalPsychometric.exe"
+        ])
         output_name = "DigitalPsychometric.exe"
+
     elif sys.platform == "darwin": # macOS
-        cmd.append("--macos-create-app-bundle")
-        output_name = "DigitalPsychometric"
+        cmd.extend([
+            "--macos-create-app-bundle",
+            "--macos-app-mode=gui",
+            "--output-filename=DigitalPsychometric"
+        ])
+        output_name = "DigitalPsychometric.app"
+
     else: # Linux/other
-        cmd.append("--onefile")
+        cmd.extend([
+            "--onefile",
+            "--output-filename=DigitalPsychometric.bin"
+        ])
         output_name = "DigitalPsychometric.bin"
 
-    cmd.extend([
-        "--enable-plugin=pyside6",
-        f"--output-filename={output_name}",
-        "--include-module=server.models",
-        "--include-module=server.database",
-        "--include-module=requests",
-        "--include-module=local_store",
-        "--include-module=network_manager",
-        "--include-module=exam_manager",
-        "--include-module=login_window",
-        "start.py"
-    ])
+    cmd.extend(shared_options)
 
-    print("Building with Nuitka...")
+    print("\nBuilding with Nuitka...")
     print("Command:", " ".join(cmd))
+    print("-" * 40)
 
     try:
-        subprocess.check_call(cmd)
-        print(f"\nBuild complete. Executable is likely in DigitalPsychometric.dist/{output_name} or similar (depending on Nuitka version/platform).")
-    except subprocess.CalledProcessError as e:
-        print(f"\nBuild failed with error code {e.returncode}")
+        # We use subprocess.call instead of check_call so we can handle the stream better
+        result = subprocess.call(cmd)
+        if result == 0:
+            print(f"\n[SUCCESS] Build complete! Executable generated: {output_name}")
+        else:
+            print(f"\n[ERROR] Build failed with Nuitka exit code {result}")
+
     except FileNotFoundError:
-        print("\nError: Python executable or Nuitka module not found. Make sure 'nuitka' is installed in your environment.")
+        print("\n[ERROR] Python executable or Nuitka module not found.")
+        print("Please ensure you are in an activated virtual environment and have run: pip install nuitka zstandard pyside6 pymupdf requests")
 
 if __name__ == "__main__":
     if "--all-cmds" in sys.argv:

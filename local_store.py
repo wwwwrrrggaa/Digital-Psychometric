@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import shutil
 from datetime import datetime
 from passlib.context import CryptContext
 
@@ -213,5 +214,32 @@ def delete_exam_progress(username, exam_id):
     c.execute("DELETE FROM exam_inprogress WHERE username = ? AND exam_id = ?", (username, exam_id))
     conn.commit()
     conn.close()
+
+def reset_all_data():
+    """
+    Deletes all local data including the database, exams, and saves.
+    """
+    # 1. Close any DB connections (handled by context managers usually, but make sure)
+    # Since we use connect() inside methods, existing connections should be closed unless main app holds one.
+
+    # 2. Delete DB file
+    if os.path.exists(DB_NAME):
+        try:
+            os.remove(DB_NAME)
+        except Exception as e:
+            print(f"Failed to remove DB: {e}")
+            raise e
+
+    # 3. Delete folders: Exams, FullExams, Saves
+    folders = ["Exams", "FullExams", "Saves"]
+    for folder in folders:
+        if os.path.isdir(folder):
+            try:
+                shutil.rmtree(folder)
+            except Exception as e:
+                 print(f"Failed to remove {folder}: {e}")
+
+    # 4. Re-init DB
+    init_db()
 
 init_db()
