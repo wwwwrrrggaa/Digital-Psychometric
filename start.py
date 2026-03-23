@@ -213,6 +213,8 @@ class Window(QDialog):
             timer = self.Box4.currentText()
             if self.Box0.currentText() == "Exams":
                 examtype = 0
+            else:
+                examtype = 1
             self.accept()
         else:
              # Should be covered above
@@ -238,8 +240,9 @@ class Window(QDialog):
             examtype = 0
         else:
             examtype = 1
+        print(f"DEBUG: Found {len_true_answers} files in Trueanswers. Setting examtype to {examtype}")
         loadstate = 1
-        self.close()
+        self.accept()
 
     def switch_mode(self):
         index = self.formLayout.count()

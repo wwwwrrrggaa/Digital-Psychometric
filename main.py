@@ -201,7 +201,7 @@ def create_answer_widget(answers):
 
 
 def main_app(args, timer, exam_path=None):
-    global counter, limit, w, examnames, answers, trueanswers, true_answers, shuffle, typeexam
+    global counter, limit, w, examnames, answers, trueanswers, true_answers, shuffle, typeexam, boxofanswers
     typeexam = 0
     if args[0][2] == 1:
         typeexam = 1

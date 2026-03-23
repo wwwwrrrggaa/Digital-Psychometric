@@ -7,7 +7,7 @@ import sys
 from PySide6.QtCore import QModelIndex, QPoint, QStandardPaths, QUrl, Slot
 from PySide6.QtPdf import QPdfBookmarkModel, QPdfDocument
 from PySide6.QtPdfWidgets import QPdfView
-from PySide6.QtWidgets import QDialog, QFileDialog, QMainWindow, QMessageBox, QSpinBox
+from PySide6.QtWidgets import QDialog, QFileDialog, QMainWindow, QMessageBox, QSpinBox, QWidget, QVBoxLayout, QLayout
 
 from ui_mainwindow import Ui_MainWindow
 from zoomselector import ZoomSelector
@@ -24,6 +24,7 @@ class MainWindow(QMainWindow):
         self.m_pageSelector = QSpinBox(self)
         self.m_document = QPdfDocument(self)
         self.m_fileDialog = None
+        self._answersHost = None
 
         self.ui.setupUi(self)
         self.m_zoomSelector.setMaximumWidth(150)
@@ -46,19 +47,39 @@ class MainWindow(QMainWindow):
         # self.ui.bookmarkView.setModel(bookmark_model)
         # self.ui.bookmarkView.activated.connect(self.bookmark_selected)
 
+        # Restore layout structure that seems compromised in ui_mainwindow.py
+        if self.ui.splitter.indexOf(self.ui.tabWidget) == -1:
+            self.ui.splitter.insertWidget(0, self.ui.tabWidget)
+
+        if self.ui.tabWidget.indexOf(self.ui.bookmarkTab) == -1:
+            self.ui.tabWidget.addTab(self.ui.bookmarkTab, "answers")
+
+        # if self.ui.tabWidget.indexOf(self.ui.pagesTab) == -1:
+        #    self.ui.tabWidget.addTab(self.ui.pagesTab, "Pages")
+
         self.ui.tabWidget.setTabEnabled(1, False)  # disable 'Pages' tab for now
+        self.bookmarkTabLayout = QVBoxLayout(self.ui.bookmarkTab)
+        self.bookmarkTabLayout.setContentsMargins(0, 0, 0, 0)
+        self.bookmarkTabLayout.setSpacing(0)
+        self.ui.bookmarkTab.setLayout(self.bookmarkTabLayout)
 
         self.ui.pdfView.setDocument(self.m_document)
 
-        self.ui.pdfView.zoomFactorChanged.connect(self.m_zoomSelector.set_zoom_factor)
-        mode = QPdfView.PageMode.MultiPage
-        self.ui.pdfView.setPageMode(mode)
-
     def addanswers(self, layout):
-        self.ui.tabWidget.setLayout(layout)
-        self.ui.tabWidget.setMinimumWidth(75)
+        if self._answersHost:
+            # Clear old host
+            self.bookmarkTabLayout.removeWidget(self._answersHost)
+            self._answersHost.setParent(None)
+            self._answersHost.deleteLater()
+            self._answersHost = None
 
-    # remove
+        self._answersHost = QWidget()
+        self._answersHost.setLayout(layout)
+        self.bookmarkTabLayout.addWidget(self._answersHost)
+        self.ui.bookmarkTab.setVisible(True)
+        self.ui.tabWidget.setCurrentWidget(self.ui.bookmarkTab)
+        self.ui.tabWidget.setMinimumWidth(140)
+
     @Slot(QUrl)
     def open(self, doc_location):
         if doc_location.isLocalFile():

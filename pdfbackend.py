@@ -6,6 +6,7 @@ No logic changes are made.
 
 import os
 import pickle
+import shutil
 
 from pymupdf import open as pdfopen
 
@@ -127,9 +128,13 @@ def give_final_scores(rawscores, gradingkey):
 
 
 def save_answers(answerlist, counter):
-    appdata = get_save_slot() + r"\Answers\\" + str(counter) + ".txt"
+    appdata_dir = os.path.join(get_save_slot(), "Answers")
+    if not os.path.exists(appdata_dir):
+        os.makedirs(appdata_dir)
+    appdata = os.path.join(appdata_dir, f"{counter}.txt")
     with open(appdata, "wb") as fp:
         pickle.dump(answerlist, fp)
+    print(f"DEBUG: Saved answers to {appdata}")
     return appdata
 
 
@@ -214,6 +219,17 @@ def main(filename, saveslotnew):
     grading_key_save_location = saveslot + "\\Grade\gradingkey.txt"
     grading_key_save_file = open(grading_key_save_location, "wb")
     pickle.dump(grading_key, grading_key_save_file)
+
+    # Copy answer.png if it exists
+    src_img = os.path.join(foldername, "answer.png")
+    dst_img_dir = os.path.join(saveslot, "images")
+    if not os.path.exists(dst_img_dir):
+        os.makedirs(dst_img_dir)
+    dst_img = os.path.join(dst_img_dir, "answer.png")
+
+    if os.path.exists(src_img):
+        shutil.copy2(src_img, dst_img)
+
     answers = [list(item) for item in answers]
     true_answers_dir = save_true_answers(answers, classify_chapters(answers))
     print(true_answers_dir)
@@ -233,10 +249,20 @@ def main_resume(saveslotnew):
     answers_dir = save_folder + "Answers\\"
     chapters_dir = save_folder + "Chapters\\"
     trueanswers_dir = save_folder + "Trueanswers\\"
-    len_answers = len(os.listdir(answers_dir))
-    combined_answers = [pickle.load(open(answers_dir + str(i) + ".txt", "rb")) for i in range(len_answers)]
-    combined_trueanswers = [pickle.load(open(trueanswers_dir + file_name, "rb")) for file_name in os.listdir(trueanswers_dir)]
-    chapter_file_names = [chapters_dir + file_name for file_name in os.listdir(chapters_dir)]
+
+    # Sort files to ensure correct order
+    answer_files = sorted(os.listdir(answers_dir), key=lambda x: int(os.path.splitext(x)[0]) if os.path.splitext(x)[0].isdigit() else x)
+    trueanswer_files = sorted(os.listdir(trueanswers_dir)) # Starts with number usually, or generic
+    # Trueanswers name format is "0-2.txt" etc. 0 is index. Sorting alphabetically matches numerical index for single digits.
+    # But better to sort by index if possible. format: "idx-name.txt"
+    trueanswer_files.sort(key=lambda x: int(x.split('-')[0]) if '-' in x else x)
+
+    chapter_files = sorted(os.listdir(chapters_dir), key=lambda x: int(x.split('-')[1].split('.')[0]) if 'chapter-' in x else x)
+
+    len_answers = len(answer_files)
+    combined_answers = [pickle.load(open(answers_dir + f, "rb")) for f in answer_files]
+    combined_trueanswers = [pickle.load(open(trueanswers_dir + f, "rb")) for f in trueanswer_files]
+    chapter_file_names = [chapters_dir + f for f in chapter_files]
     return (
         chapter_file_names,
         combined_answers,
